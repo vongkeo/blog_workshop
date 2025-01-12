@@ -68,15 +68,3 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 ```bash
 php artisan storage:link
 ```
-
-
-
-
-### Laravel clear 
-```bash
-php artisan cache:clear
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan make:model Category -mrc
-```
