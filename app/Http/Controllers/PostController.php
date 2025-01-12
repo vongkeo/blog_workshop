@@ -22,7 +22,11 @@ class PostController extends Controller
      */
     public function index()
     {
-        $posts = $this->model->all();
+        $search = request('search');
+        $posts = $this->model->with('user:id,name')
+            ->where('title', 'like', '%' . $search . '%')
+            ->orWhere('content', 'like', '%' . $search . '%');
+        $posts = $this->help->paginate($posts);
         return $this->help->response('Posts retrieved successfully', $posts, 200);
     }
 
@@ -50,16 +54,27 @@ class PostController extends Controller
             $rules = [
                 'title' => 'required|string|max:100',
                 'content' => 'required|string',
-                'image' => 'nullable|image',
+                'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // 2mb
                 'user_id' => 'required|integer'
             ];
             $this->help->validated($request, $rules);
+            // check if request contain file 
+            $hasFile = $request->hasFile('file');
+            // if file exist
+            if ($hasFile) {
+                // upload the file
+                $file = $request->file('file');
+                $full_path = $this->help->fileUpload($file, 'posts');
+                // merge full path to the request in image key
+                $request->merge(['image2' => $full_path]);
+            }
             // 2.store the data in the database
             // generate the object array
             $arr = [
                 'title' => $request->title,
                 'content' => $request->content,
-                'user_id' => $request->user_id
+                'user_id' => $request->user_id,
+                'image' => $request->image2
             ];
             $object = $this->model->create($arr);
             // 3.return the response
@@ -92,7 +107,7 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function edit(Post $post)
+    public function edit($post)
     {
         //
     }
@@ -104,26 +119,41 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $post)
+    public function update(Request $request)
     {
-
+        // return $request->all();
         try {
             $rules = [
+                'id' => 'required|integer',
                 'title' => 'required|string|max:100',
                 'content' => 'required|string',
-                'image' => 'nullable|image',
+                'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // 2mb
                 'user_id' => 'required|integer'
             ];
             $this->help->validated($request, $rules);
             $model = new Post();
-            $post = $model->find($post);
+            $posId = $request->id;
+            $post = $model->find($posId);
             if (!$post) {
                 return $this->help->response('Post not found', null, 404);
+            }
+            // check if request contain file 
+            $hasFile = $request->hasFile('file');
+            // if file exist
+            if ($hasFile) {
+                // upload the file
+                $file = $request->file('file');
+                $full_path = $this->help->fileUpload($file, 'posts');
+                // merge full path to the request in image key
+                $request->merge(['image3' => $full_path]);
+                // delete the old file
+                $this->help->fileDelete($post->image);
             }
             $arr = [
                 'title' => $request->title,
                 'content' => $request->content,
-                'user_id' => $request->user_id
+                'user_id' => $request->user_id,
+                'image' => $request->image3
             ];
             $post->update($arr);
             return $this->help->response('Post updated successfully', $post, 200);
@@ -145,6 +175,9 @@ class PostController extends Controller
         if (!$post) {
             return $this->help->response('Post not found', null, 404);
         }
+        // delete the file
+        $this->help->fileDelete($post->image);
+        // delete the post
         $post->delete();
         return $this->help->response('Post deleted successfully', null, 200);
     }
