@@ -41,6 +41,8 @@ $app->singleton(
     App\Exceptions\Handler::class
 );
 
+$app->register(Tymon\JWTAuth\Providers\LumenServiceProvider::class);
+
 /*
 |--------------------------------------------------------------------------
 | Return The Application

@@ -23,7 +23,7 @@ class PostController extends Controller
     public function index()
     {
         $search = request('search');
-        $posts = $this->model->with('user:id,name')
+        $posts = $this->model->with('user:id,name', 'category:id,name')
             ->where('title', 'like', '%' . $search . '%')
             ->orWhere('content', 'like', '%' . $search . '%');
         $posts = $this->help->paginate($posts);
@@ -55,7 +55,8 @@ class PostController extends Controller
                 'title' => 'required|string|max:100',
                 'content' => 'required|string',
                 'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // 2mb
-                'user_id' => 'required|integer'
+                'user_id' => 'required|integer',
+                'category_id' => 'required|exists:categories,id'
             ];
             $this->help->validated($request, $rules);
             // check if request contain file 
@@ -74,7 +75,8 @@ class PostController extends Controller
                 'title' => $request->title,
                 'content' => $request->content,
                 'user_id' => $request->user_id,
-                'image' => $request->image2
+                'image' => $request->image2,
+                'category_id' => $request->category_id
             ];
             $object = $this->model->create($arr);
             // 3.return the response
@@ -92,9 +94,8 @@ class PostController extends Controller
      */
     public function show($postId)
     {
-
         $model = new Post();
-        $post = $model->find($postId);
+        $post = $model->find($postId)->load('user:id,name', 'category:id,name');
         if (!$post) {
             return $this->help->response('Post not found', null, 404);
         }
@@ -128,7 +129,8 @@ class PostController extends Controller
                 'title' => 'required|string|max:100',
                 'content' => 'required|string',
                 'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // 2mb
-                'user_id' => 'required|integer'
+                'user_id' => 'required|integer',
+                'category_id' => 'required|exists:categories,id'
             ];
             $this->help->validated($request, $rules);
             $model = new Post();
@@ -153,7 +155,8 @@ class PostController extends Controller
                 'title' => $request->title,
                 'content' => $request->content,
                 'user_id' => $request->user_id,
-                'image' => $request->image3
+                'image' => $request->image3,
+                'category_id' => $request->category_id
             ];
             $post->update($arr);
             return $this->help->response('Post updated successfully', $post, 200);
